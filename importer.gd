@@ -3,7 +3,7 @@ extends Node
 
 @export_tool_button("Build Mesh") var parse_button := parse
 
-const path: String = "res://examples/03.txt"
+@export_file_path() var path: String = "res://examples/03.txt"
 
 func parse() -> void:
 	var file: FileAccess
@@ -88,6 +88,7 @@ func process_mesh(buffer: ByteBuffer) -> void:
 				mesh_array = process_vrts(buffer)
 			"TRIS":
 				indices = process_tris(buffer)
+				_clear_children()
 				var meshinst := MeshInstance3D.new()
 				var mesh := ArrayMesh.new()
 				mesh_array[Mesh.ARRAY_INDEX] = indices
@@ -114,6 +115,9 @@ func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
 		tris.append_array(triangle)
 	return tris
 
+func _clear_children() -> void:
+	for child: Node in get_children():
+		child.queue_free()
 
 func process_vrts(buffer: ByteBuffer) -> Array:
 	var size: int = buffer.get_int()
