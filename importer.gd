@@ -45,39 +45,63 @@ func parse_file(file: FileAccess) -> void:
 	print("Parsing complete.")
 
 class BlitzNode:
-	var pos: Vector3
-	var scl: Vector3
-	var rot: Vector4
+	var name: String
+	var tform: Transform3D
 
-func process_node(file: FileAccess) -> void:
+func process_node(file: FileAccess) -> BlitzNode:
 	var size: int = file.get_32()
 	var buffer: ByteBuffer = ByteBuffer.new(
 		file.get_buffer(size)
 	)
 
-	var node_name: String = buffer.get_string()
-	print("Node: %s" % node_name)
-
 	var node: BlitzNode = BlitzNode.new()
+	node.name = buffer.get_string()
+
 	var pos: Vector3 = buffer.get_vec3()
 	var scl: Vector3 = buffer.get_vec3()
 	var rot: Quaternion = buffer.get_quat()
 
-	var type: String = buffer.get_type()
+	var basis := Basis(rot)
+	basis = basis.scaled(scl)
+	var tform := Transform3D(basis, pos)
+	node.tform = tform
 
-	match type:
-		"MESH":
-			process_mesh(buffer)
-		_:
-			printerr("%s not implemented" % type)
+	while !buffer.eof_reached():
 
+		var type: String = buffer.get_type()
 
-	print("Not implemented")
+		match type:
+			"MESH":
+				process_mesh(buffer)
+			"ANIM":
+				process_anim(buffer)
+			_:
+				printerr("%s not implemented" % type)
+				break
+
+	return node
+
+class BlitzAnim:
+	var flags: int
+	var frames: int
+	var fps: float
+
+func process_anim(buffer: ByteBuffer) -> BlitzAnim:
+	var size: int = buffer.get_int()
+	buffer = ByteBuffer.new(buffer.get_buffer(size))
+
+	var anim: BlitzAnim = BlitzAnim.new()
+	anim.flags = buffer.get_int()
+	anim.frames = buffer.get_int()
+	anim.fps = buffer.get_float()
+
+	return anim
 
 func process_mesh(buffer: ByteBuffer) -> void:
 	var size: int = buffer.get_int()
 	buffer = ByteBuffer.new(buffer.get_buffer(size))
 	var brush_id: int = buffer.get_int()
+
 	var mesh_array: Array
 	var indices: PackedInt32Array
 
@@ -107,10 +131,11 @@ func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
 	var brush_id: int = buffer.get_int()
 	var tris: PackedInt32Array = []
 	while !buffer.eof_reached():
+		var v0 := buffer.get_int()
+		var v1 := buffer.get_int()
+		var v2 := buffer.get_int()
 		var triangle: PackedInt32Array = [
-			buffer.get_int(),
-			buffer.get_int(),
-			buffer.get_int()
+			v0, v1, v2
 		]
 		tris.append_array(triangle)
 	return tris
@@ -126,6 +151,8 @@ func process_vrts(buffer: ByteBuffer) -> Array:
 	var flags: int = buffer.get_int()
 	var normal_present: bool = bool(flags & 0b01)
 	var color_present: bool = bool(flags & 0b10)
+
+	print("Normals: %s" % normal_present)
 
 	var tex_coord_sets: int = buffer.get_int()
 	if tex_coord_sets > 1:
@@ -145,6 +172,7 @@ func process_vrts(buffer: ByteBuffer) -> Array:
 			st.set_color(buffer.get_color())
 		st.set_uv(buffer.get_vec2())
 		st.add_vertex(pos)
+
 	var mesh_array: Array = st.commit_to_arrays()
 	return mesh_array
 
@@ -183,8 +211,8 @@ class ByteBuffer:
 	var buffer: PackedByteArray
 	var cursor: int = 0
 
-	func _init(buffer: PackedByteArray) -> void:
-		self.buffer = buffer
+	func _init(new_buffer: PackedByteArray) -> void:
+		self.buffer = new_buffer
 
 	func get_quat() -> Quaternion:
 		var w: float = get_float()
@@ -243,7 +271,7 @@ class ByteBuffer:
 		)
 	func get_vec3() -> Vector3:
 		return Vector3(
-			get_float(),
+			-get_float(),
 			get_float(),
 			get_float()
 		)
