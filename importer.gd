@@ -34,7 +34,8 @@ func parse() -> void:
 class BlitzModel:
 	var texs: Array[BlitzTexture] = []
 	var brus: Array[BlitzBrush] = []
-	var nodes: Array[BlitzNode] = []
+	var node: BlitzNode
+
 
 func parse_file(buffer: ByteBuffer) -> void:
 
@@ -50,7 +51,7 @@ func parse_file(buffer: ByteBuffer) -> void:
 			"BRUS":
 				model.brus = process_brush(buffer)
 			"NODE":
-				process_node(buffer)
+				model.node = process_node(buffer)
 			_:
 				printerr("Type %s not implemented" % block_type)
 	print("Parsing complete.")
@@ -64,15 +65,14 @@ enum NodeType {
 class BlitzNode:
 	var name: String
 	var tform: Transform3D
-	var type: NodeType
 	var children: Array[BlitzNode] = []
 
 func process_node(buffer: ByteBuffer) -> BlitzNode:
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
 
-	var node: BlitzNode = BlitzNode.new()
-	node.name = buffer.get_string()
+	var node: BlitzNode
+	var node_name: String = buffer.get_string()
 
 	var pos: Vector3 = buffer.get_vec3()
 	var scl: Vector3 = buffer.get_vec3()
@@ -81,19 +81,27 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 	var basis := Basis(rot)
 	basis = basis.scaled(scl)
 	var tform := Transform3D(basis, pos)
-	node.tform = tform
 
 	var node_type := buffer.get_type()
 	match node_type:
 		"BONE":
-			node.type = NodeType.BONE
-			process_bone(buffer)
+			var n := BlitzBoneNode.new()
+			n.name = node_name
+			n.tform = tform
+			n.bones = process_bone(buffer)
+			node = n
 		"MESH":
-			node.type = NodeType.MESH
-			process_mesh(buffer)
+			var n := BlitzMeshNode.new()
+			n.name = node_name
+			n.tform = tform
+			n.mesh = process_mesh(buffer)
+			node = n
 		_:
 			print("NodeType %s not found, default to pivot" % node_type)
-			node.type = NodeType.PIVOT
+			var n := BlitzNode.new()
+			n.name = node_name
+			n.tform = tform
+			node = n
 
 	while !buffer.eof_reached():
 		print("Parsing Node")
@@ -162,7 +170,7 @@ class BlitzBone:
 	var vertex_id: int
 	var weight: float
 
-func process_bone(buffer: ByteBuffer) -> void:
+func process_bone(buffer: ByteBuffer) -> Array[BlitzBone]:
 	print("Parsing Bones")
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
@@ -173,6 +181,8 @@ func process_bone(buffer: ByteBuffer) -> void:
 		bone.vertex_id = buffer.get_int()
 		bone.weight = buffer.get_float()
 		bones.append(bone)
+
+	return bones
 
 class BlitzSequence:
 	var name: String
@@ -210,7 +220,7 @@ func process_anim(buffer: ByteBuffer) -> BlitzAnim:
 
 	return anim
 
-func process_mesh(buffer: ByteBuffer) -> void:
+func process_mesh(buffer: ByteBuffer) -> ArrayMesh:
 	print("Parsing Mesh")
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
@@ -218,6 +228,8 @@ func process_mesh(buffer: ByteBuffer) -> void:
 
 	var mesh_array: Array
 	var indices: PackedInt32Array
+
+	var mesh := ArrayMesh.new()
 
 	while !buffer.eof_reached():
 		var type: String = buffer.get_type()
@@ -228,7 +240,7 @@ func process_mesh(buffer: ByteBuffer) -> void:
 				indices = process_tris(buffer)
 				_clear_children()
 				var meshinst := MeshInstance3D.new()
-				var mesh := ArrayMesh.new()
+
 				mesh_array[Mesh.ARRAY_INDEX] = indices
 				mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_array)
 				meshinst.mesh = mesh
@@ -237,6 +249,7 @@ func process_mesh(buffer: ByteBuffer) -> void:
 			_:
 				printerr("%s not implemented" % type)
 				return
+	return mesh
 
 func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
 	var size: int = buffer.get_int()
