@@ -22,9 +22,7 @@ func parse() -> void:
 	var magic := buffer.get_type()
 	assert(magic == "BB3D", "File not recognized")
 
-	var size: int = buffer.get_int()
-
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var version: int = buffer.get_int()
 	parse_version(version)
@@ -85,8 +83,7 @@ class BlitzNode:
 		}
 
 func process_node(buffer: ByteBuffer) -> BlitzNode:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var node: BlitzNode
 	var node_name: String = buffer.get_string()
@@ -149,8 +146,7 @@ class BlitzKey:
 		}
 
 func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var flags: int = buffer.get_int()
 	var has_pos: bool = flags & 0b001
@@ -199,8 +195,7 @@ class BlitzMeshNode extends BlitzNode:
 		return d
 
 func process_bone(buffer: ByteBuffer) -> Dictionary[int, float]:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var bones: Dictionary[int, float] = {}
 	while !buffer.eof_reached():
@@ -226,8 +221,7 @@ class BlitzSequence:
 		}
 
 func process_seqs(buffer: ByteBuffer) -> BlitzSequence:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var seqs := BlitzSequence.new()
 	seqs.name = buffer.get_string()
@@ -250,9 +244,7 @@ class BlitzAnim:
 		}
 
 func process_anim(buffer: ByteBuffer) -> BlitzAnim:
-	print("Parsing Anim")
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var anim: BlitzAnim = BlitzAnim.new()
 	anim.flags = buffer.get_int()
@@ -262,8 +254,7 @@ func process_anim(buffer: ByteBuffer) -> BlitzAnim:
 	return anim
 
 func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var node := BlitzMeshNode.new()
 
@@ -297,8 +288,7 @@ func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
 	return node
 
 func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var brush_id: int = buffer.get_int()
 	var tris: PackedInt32Array = []
@@ -317,8 +307,7 @@ func _clear_children() -> void:
 		child.queue_free()
 
 func process_vrts(buffer: ByteBuffer) -> Array:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var flags: int = buffer.get_int()
 	var normal_present: bool = bool(flags & 0b01)
@@ -371,8 +360,7 @@ class BlitzBrush:
 		return str(to_dict())
 
 func process_brush(buffer: ByteBuffer) -> Array[BlitzBrush]:
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	var count: int = buffer.get_int()
 	var brushes: Array[BlitzBrush] = []
@@ -410,8 +398,7 @@ class BlitzTexture:
 
 func process_texs(buffer: ByteBuffer) -> Array[BlitzTexture]:
 	var texs: Array[BlitzTexture] = []
-	var size: int = buffer.get_int()
-	buffer = buffer.get_sub_buffer(size)
+	buffer = buffer.get_sub_buffer()
 
 	while !buffer.eof_reached():
 		var tex: BlitzTexture = BlitzTexture.new()
@@ -423,11 +410,11 @@ func process_texs(buffer: ByteBuffer) -> Array[BlitzTexture]:
 		tex.blend_mode = buffer.get_int() as BlendMode
 
 		var pos: Vector2 = buffer.get_vec2()
-		var scale: Vector2 = buffer.get_vec2()
-		var rotation: float = buffer.get_float()
+		var scl: Vector2 = buffer.get_vec2()
+		var rot: float = buffer.get_float()
 
-		tex.tform = Transform2D(rotation, pos)
-		tex.tform = tex.tform.scaled(scale)
+		tex.tform = Transform2D(rot, pos)
+		tex.tform = tex.tform.scaled(scl)
 
 		if tex.tform != Transform2D.IDENTITY:
 			printerr("Mutated transform not supported: %s" % tex.tform)

@@ -40,9 +40,10 @@ class ByteBuffer:
 		cursor += length
 		return b
 
-	func get_sub_buffer(length: int) -> ByteBuffer:
+	func get_sub_buffer() -> ByteBuffer:
+		var size := get_int()
 		var new_offset := offset + cursor
-		var b := _get_buffer(length)
+		var b := _get_buffer(size)
 		var new_buffer := ByteBuffer.new(b)
 		new_buffer.offset = new_offset
 		return new_buffer
