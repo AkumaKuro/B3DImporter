@@ -36,6 +36,17 @@ class BlitzModel:
 	var brus: Array[BlitzBrush] = []
 	var node: BlitzNode
 
+	func to_dict() -> Dictionary:
+		var t := texs.map(
+			func(s: BlitzTexture) -> Dictionary:
+				return s.to_dict()
+		)
+		return {
+			"texs": t,
+			"brus": brus,
+			"node": node.to_dict()
+		}
+
 
 func parse_file(buffer: ByteBuffer) -> void:
 
@@ -55,6 +66,7 @@ func parse_file(buffer: ByteBuffer) -> void:
 			_:
 				printerr("Type %s not implemented" % block_type)
 	print("Parsing complete.")
+	print(JSON.stringify(model.to_dict(), "\t"))
 
 enum NodeType {
 	PIVOT,
@@ -66,6 +78,17 @@ class BlitzNode:
 	var name: String
 	var tform: Transform3D
 	var children: Array[BlitzNode] = []
+
+	func to_dict() -> Dictionary:
+		var c := children.map(
+			func(ch: BlitzNode) -> Dictionary:
+				return ch.to_dict()
+		)
+		return {
+			"name": name,
+			"tform": tform,
+			"children": c
+		}
 
 func process_node(buffer: ByteBuffer) -> BlitzNode:
 	var size: int = buffer.get_int()
@@ -104,7 +127,6 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 			node = n
 
 	while !buffer.eof_reached():
-		print("Parsing Node")
 		var type: String = buffer.get_type()
 
 		match type:
@@ -127,8 +149,13 @@ class BlitzKey:
 	var frame: int
 	var tform: Transform3D
 
+	func to_dict() -> Dictionary:
+		return {
+			"frame": frame,
+			"tform": tform
+		}
+
 func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
-	print("Parsing Key")
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
 
@@ -161,26 +188,31 @@ func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
 	return keys
 
 class BlitzBoneNode extends BlitzNode:
-	var bones: Array[BlitzBone]
+	var bones: Dictionary[int, float]
+
+	func to_dict() -> Dictionary:
+		var d := super.to_dict()
+		d["bones"] = bones
+		return d
 
 class BlitzMeshNode extends BlitzNode:
 	var mesh: ArrayMesh
 
-class BlitzBone:
-	var vertex_id: int
-	var weight: float
+	func to_dict() -> Dictionary:
+		var d := super.to_dict()
+		d["mesh"] = mesh
+		return d
 
-func process_bone(buffer: ByteBuffer) -> Array[BlitzBone]:
-	print("Parsing Bones")
+func process_bone(buffer: ByteBuffer) -> Dictionary[int, float]:
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
 
-	var bones: Array[BlitzBone] = []
+	var bones: Dictionary[int, float] = {}
 	while !buffer.eof_reached():
-		var bone := BlitzBone.new()
-		bone.vertex_id = buffer.get_int()
-		bone.weight = buffer.get_float()
-		bones.append(bone)
+		var vertex_id := buffer.get_int()
+		var weight := buffer.get_float()
+		# TODO clamp weights??
+		bones[vertex_id] = weight
 
 	return bones
 
@@ -190,8 +222,15 @@ class BlitzSequence:
 	var end: int
 	var flags: int
 
+	func to_dict() -> Dictionary:
+		return {
+			"name": name,
+			"start": start,
+			"end": end,
+			"flags": flags
+		}
+
 func process_seqs(buffer: ByteBuffer) -> BlitzSequence:
-	print("Parsing Seqs")
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
 
@@ -208,6 +247,13 @@ class BlitzAnim:
 	var frames: int
 	var fps: float
 
+	func to_dict() -> Dictionary:
+		return {
+			"flags": flags,
+			"frames": frames,
+			"fps": fps
+		}
+
 func process_anim(buffer: ByteBuffer) -> BlitzAnim:
 	print("Parsing Anim")
 	var size: int = buffer.get_int()
@@ -221,7 +267,6 @@ func process_anim(buffer: ByteBuffer) -> BlitzAnim:
 	return anim
 
 func process_mesh(buffer: ByteBuffer) -> ArrayMesh:
-	print("Parsing Mesh")
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
 	var brush_id: int = buffer.get_int()
@@ -312,6 +357,19 @@ class BlitzBrush:
 	var fx: int
 	var texture_id: int
 
+	func to_dict() -> Dictionary:
+		return {
+			"name": name,
+			"color": color,
+			"shininess": shininess,
+			"blend": blend,
+			"fx": fx,
+			"texture_id": texture_id
+		}
+
+	func _to_string() -> String:
+		return str(to_dict())
+
 func process_brush(buffer: ByteBuffer) -> Array[BlitzBrush]:
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
@@ -322,7 +380,6 @@ func process_brush(buffer: ByteBuffer) -> Array[BlitzBrush]:
 	for i: int in count:
 		var brush: BlitzBrush = BlitzBrush.new()
 		brush.name = buffer.get_string()
-		print("Brush name: %s" % brush.name)
 		brush.color = buffer.get_color()
 		brush.shininess = buffer.get_float()
 		brush.blend = buffer.get_int()
@@ -343,6 +400,14 @@ class BlitzTexture:
 	var flags: int
 	var blend_mode: BlendMode = BlendMode.NORMAL
 
+	func to_dict() -> Dictionary:
+		return {
+			"path": path,
+			"tform": tform,
+			"flags": flags,
+			"blend_mode": blend_mode
+		}
+
 func process_texs(buffer: ByteBuffer) -> Array[BlitzTexture]:
 	var texs: Array[BlitzTexture] = []
 	var size: int = buffer.get_int()
@@ -351,14 +416,9 @@ func process_texs(buffer: ByteBuffer) -> Array[BlitzTexture]:
 	while !buffer.eof_reached():
 		var tex: BlitzTexture = BlitzTexture.new()
 
-		print(buffer.buffer.size())
-
 		var texture_name: String = buffer.get_string()
-		print("Texture Name: %s" % texture_name)
-		print(buffer.buffer.size() - buffer.cursor)
 
 		tex.flags = buffer.get_int()
-
 
 		tex.blend_mode = buffer.get_int() as BlendMode
 
@@ -372,7 +432,6 @@ func process_texs(buffer: ByteBuffer) -> Array[BlitzTexture]:
 		if tex.tform != Transform2D.IDENTITY:
 			printerr("Mutated transform not supported: %s" % tex.tform)
 
-		print("Texture Flags: %s, Texture Blend: %s" % [tex.flags, tex.blend_mode])
 		if tex.flags != 1 and tex.blend_mode != BlendMode.NORMAL:
 			printerr("Used flags not supported")
 
