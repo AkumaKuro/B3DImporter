@@ -68,12 +68,6 @@ func parse_file(buffer: ByteBuffer) -> void:
 	print("Parsing complete.")
 	print(JSON.stringify(model.to_dict(), "\t"))
 
-enum NodeType {
-	PIVOT,
-	BONE,
-	MESH
-}
-
 class BlitzNode:
 	var name: String
 	var tform: Transform3D
@@ -101,9 +95,9 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 	var scl: Vector3 = buffer.get_vec3()
 	var rot: Quaternion = buffer.get_quat()
 
-	var basis := Basis(rot)
-	basis = basis.scaled(scl)
-	var tform := Transform3D(basis, pos)
+	var node_basis := Basis(rot)
+	node_basis = node_basis.scaled(scl)
+	var tform := Transform3D(node_basis, pos)
 
 	var node_type := buffer.get_type()
 	match node_type:
@@ -114,10 +108,9 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 			n.bones = process_bone(buffer)
 			node = n
 		"MESH":
-			var n := BlitzMeshNode.new()
+			var n := process_mesh(buffer)
 			n.name = node_name
 			n.tform = tform
-			n.mesh = process_mesh(buffer)
 			node = n
 		_:
 			print("NodeType %s not found, default to pivot" % node_type)
@@ -180,9 +173,9 @@ func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
 		if has_rot:
 			rot = buffer.get_quat()
 
-		var basis := Basis(rot)
-		basis = basis.scaled(scl)
-		var tform := Transform3D(basis, pos)
+		var node_basis := Basis(rot)
+		node_basis = node_basis.scaled(scl)
+		var tform := Transform3D(node_basis, pos)
 		key.tform = tform
 		keys.append(key)
 	return keys
@@ -197,9 +190,11 @@ class BlitzBoneNode extends BlitzNode:
 
 class BlitzMeshNode extends BlitzNode:
 	var mesh: ArrayMesh
+	var brush_id: int
 
 	func to_dict() -> Dictionary:
 		var d := super.to_dict()
+		d["brush_id"] = brush_id
 		d["mesh"] = mesh
 		return d
 
@@ -266,10 +261,13 @@ func process_anim(buffer: ByteBuffer) -> BlitzAnim:
 
 	return anim
 
-func process_mesh(buffer: ByteBuffer) -> ArrayMesh:
+func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
 	var size: int = buffer.get_int()
 	buffer = buffer.get_sub_buffer(size)
-	var brush_id: int = buffer.get_int()
+
+	var node := BlitzMeshNode.new()
+
+	node.brush_id = buffer.get_int()
 
 	var mesh_array: Array
 	var indices: PackedInt32Array
@@ -294,7 +292,9 @@ func process_mesh(buffer: ByteBuffer) -> ArrayMesh:
 			_:
 				printerr("%s not implemented" % type)
 				return
-	return mesh
+
+	node.mesh = mesh
+	return node
 
 func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
 	var size: int = buffer.get_int()
