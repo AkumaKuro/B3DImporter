@@ -88,33 +88,20 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 	var node: BlitzNode
 	var node_name: String = buffer.get_string()
 
-	var pos: Vector3 = buffer.get_vec3()
-	var scl: Vector3 = buffer.get_vec3()
-	var rot: Quaternion = buffer.get_quat()
-
-	var node_basis := Basis(rot)
-	node_basis = node_basis.scaled(scl)
-	var tform := Transform3D(node_basis, pos)
+	var tform := buffer.get_tform()
 
 	var node_type := buffer.get_type()
 	match node_type:
 		"BONE":
-			var n := BlitzBoneNode.new()
-			n.name = node_name
-			n.tform = tform
-			n.bones = process_bone(buffer)
-			node = n
+			node = process_bone(buffer)
 		"MESH":
-			var n := process_mesh(buffer)
-			n.name = node_name
-			n.tform = tform
-			node = n
+			node = process_mesh(buffer)
 		_:
 			print("NodeType %s not found, default to pivot" % node_type)
-			var n := BlitzNode.new()
-			n.name = node_name
-			n.tform = tform
-			node = n
+			node = BlitzNode.new()
+
+	node.name = node_name
+	node.tform = tform
 
 	while !buffer.eof_reached():
 		var type: String = buffer.get_type()
@@ -194,7 +181,7 @@ class BlitzMeshNode extends BlitzNode:
 		d["mesh"] = mesh
 		return d
 
-func process_bone(buffer: ByteBuffer) -> Dictionary[int, float]:
+func process_bone(buffer: ByteBuffer) -> BlitzBoneNode:
 	buffer = buffer.get_sub_buffer()
 
 	var bones: Dictionary[int, float] = {}
@@ -204,7 +191,9 @@ func process_bone(buffer: ByteBuffer) -> Dictionary[int, float]:
 		# TODO clamp weights??
 		bones[vertex_id] = weight
 
-	return bones
+	var node := BlitzBoneNode.new()
+	node.bones = bones
+	return node
 
 class BlitzSequence:
 	var name: String

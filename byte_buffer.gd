@@ -48,6 +48,15 @@ class ByteBuffer:
 		new_buffer.offset = new_offset
 		return new_buffer
 
+	func get_tform() -> Transform3D:
+		var pos := get_vec3()
+		var scl := get_vec3()
+		var rot := get_quat()
+
+		var basis := Basis(rot).scaled(scl)
+		var tform := Transform3D(basis, pos)
+		return tform
+
 	func get_int() -> int:
 		var b: PackedByteArray = _get_buffer(4)
 		var i: int = b.to_int32_array()[0]
