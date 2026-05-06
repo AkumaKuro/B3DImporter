@@ -48,10 +48,14 @@ class ByteBuffer:
 		new_buffer.offset = new_offset
 		return new_buffer
 
-	func get_tform() -> Transform3D:
-		var pos := get_vec3()
-		var scl := get_vec3()
-		var rot := get_quat()
+	func get_tform(
+		has_pos: bool = true,
+		has_scl: bool = true,
+		has_rot: bool = true
+	) -> Transform3D:
+		var pos := get_vec3() if has_pos else Vector3.ZERO
+		var scl := get_vec3() if has_scl else Vector3.ONE
+		var rot := get_quat() if has_rot else Quaternion.IDENTITY
 
 		var basis := Basis(rot).scaled(scl)
 		var tform := Transform3D(basis, pos)

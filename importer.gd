@@ -145,21 +145,9 @@ func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
 		var key := BlitzKey.new()
 		key.frame = buffer.get_int()
 
-		var pos: Vector3 = Vector3.ZERO
-		var scl: Vector3 = Vector3.ONE
-		var rot: Quaternion = Quaternion.IDENTITY
-
-		if has_pos:
-			pos = buffer.get_vec3()
-		if has_scl:
-			scl = buffer.get_vec3()
-		if has_rot:
-			rot = buffer.get_quat()
-
-		var node_basis := Basis(rot)
-		node_basis = node_basis.scaled(scl)
-		var tform := Transform3D(node_basis, pos)
-		key.tform = tform
+		key.tform = buffer.get_tform(
+			has_pos, has_scl, has_rot
+		)
 		keys.append(key)
 	return keys
 
