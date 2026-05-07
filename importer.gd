@@ -95,7 +95,7 @@ func parse_file(buffer: ByteBuffer) -> void:
 			"BRUS":
 				model.brus = BlitzBrush.process_brush(buffer)
 			"NODE":
-				model.node = BlitzNode.process_node(buffer)
+				model.node = BlitzNode.process_node(buffer, null)
 			_:
 				printerr("Type %s not implemented" % block_type)
 	print("Parsing complete.")

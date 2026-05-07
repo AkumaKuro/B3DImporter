@@ -10,10 +10,12 @@ class BlitzNode:
 	var tform: Transform3D
 	var children: Array[BlitzNode] = []
 
+	var parent: BlitzNode
+
 	var anim: BlitzAnim
 
 
-	static func process_node(buffer: ByteBuffer) -> BlitzNode:
+	static func process_node(buffer: ByteBuffer, parents: BlitzNode) -> BlitzNode:
 		buffer = buffer.get_sub_buffer()
 
 		var node: BlitzNode
@@ -33,11 +35,22 @@ class BlitzNode:
 
 		node.name = node_name
 		node.tform = tform
+		if parents:
+			node.parent = parents
 
 		node.node_process(buffer)
 
 		return node
 
+	func get_path() -> PackedStringArray:
+		var p := PackedStringArray([])
+
+		if parent != null:
+			p.append_array(parent.get_path())
+
+		p.append(name)
+
+		return p
 
 	func node_process(buffer: ByteBuffer) -> void:
 		while !buffer.eof_reached():
@@ -49,7 +62,9 @@ class BlitzNode:
 				"SEQS":
 					BlitzSequence.process_seqs(buffer)
 				"NODE":
-					var n := process_node(buffer)
+					var n := process_node(buffer, self)
+
+					#node_parents.remove_at(node_parents.size() - 1)
 					add_child(n)
 				"KEYS":
 					BlitzAnim.process_keys(buffer, self)

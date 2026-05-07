@@ -11,7 +11,7 @@ class BlitzAnim:
 
 	# Anim [frame: int, tform: Transform3D]
 	# Dict [node: BlitzNode, keys: Anim]
-	var tracks: Dictionary[BlitzNode, Dictionary]
+	var tracks: Dictionary[String, Dictionary]
 
 	func to_dict() -> Dictionary:
 		return {
@@ -37,6 +37,9 @@ class BlitzAnim:
 	static func process_keys(buffer: ByteBuffer, node: BlitzNode):
 		buffer = buffer.get_sub_buffer()
 
+		var path: String = "/".join(node.get_path()) + ":transform"
+
+		print(path)
 		var track := animation.add_track(Animation.TYPE_VALUE)
 		animation.track_set_path(track, NodePath(node.name))
 
@@ -55,4 +58,4 @@ class BlitzAnim:
 
 			animation.track_insert_key(track, frame / anim.fps, tform)
 			keys[frame] = tform
-		BlitzAnim.anim.tracks[node] = keys
+		BlitzAnim.anim.tracks[path] = keys
