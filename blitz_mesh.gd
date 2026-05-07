@@ -13,8 +13,10 @@ class BlitzMeshNode extends BlitzNode:
 
 
 	static func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
-		if mesh == null:
-			mesh = ArrayMesh.new()
+		if mesh != null:
+			printerr("Only one Mesh supported as of now")
+
+		mesh = ArrayMesh.new()
 
 		buffer = buffer.get_sub_buffer()
 
