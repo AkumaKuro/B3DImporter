@@ -1,4 +1,5 @@
 const ByteBuffer := preload("res://byte_buffer.gd").ByteBuffer
+const BlitzAnim := preload("res://blitz_anim.gd").BlitzAnim
 
 class BlitzKey:
 	var frame: int
@@ -10,7 +11,7 @@ class BlitzKey:
 			"tform": tform
 		}
 
-	static func process_keys(buffer: ByteBuffer) -> Array[BlitzKey]:
+	static func process_keys(buffer: ByteBuffer):
 		buffer = buffer.get_sub_buffer()
 
 		var flags: int = buffer.get_int()
@@ -27,4 +28,4 @@ class BlitzKey:
 				has_pos, has_scl, has_rot
 			)
 			keys.append(key)
-		return keys
+		BlitzAnim.anim.keys.append_array(keys)

@@ -11,6 +11,8 @@ class BlitzNode:
 	var tform: Transform3D
 	var children: Array[BlitzNode] = []
 
+	var anim: BlitzAnim
+
 
 	static func process_node(buffer: ByteBuffer) -> BlitzNode:
 		buffer = buffer.get_sub_buffer()
