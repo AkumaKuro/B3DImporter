@@ -1,4 +1,5 @@
 @tool
+class_name Main
 extends Node3D
 
 const ByteBufferScript := preload("res://byte_buffer.gd")
@@ -11,6 +12,23 @@ const ByteBuffer := ByteBufferScript.ByteBuffer
 var model: BlitzModel
 var mesh: ArrayMesh
 
+class TForm:
+	var pos: Vector3
+	var scl: Vector3
+	var rot: Quaternion
+
+	func to_xform() -> Transform3D:
+		var b := Basis(rot)
+		b = b.scaled(scl)
+		return Transform3D(b, pos)
+
+	func _to_string() -> String:
+		return "Pos: %s, Scl: %s, Rot: %s" % [
+			pos, scl, rot
+		]
+
+static var tforms: Dictionary[BlitzNode, TForm]
+
 func _ready() -> void:
 	parse()
 
@@ -20,6 +38,7 @@ func parse() -> void:
 
 	var buffer := ByteBuffer.file_as_buffer(path)
 	mesh = ArrayMesh.new()
+	tforms = {}
 
 	var magic := buffer.get_type()
 	assert(magic == "BB3D", "File not recognized")
@@ -36,6 +55,24 @@ func parse() -> void:
 	m.mesh = mesh
 	add_child(m)
 	m.owner = self
+
+	var n := model.node.to_node()
+	add_child(n)
+	add_to_owner(n)
+
+	for i in tforms:
+		print(i, tforms[i])
+
+	print()
+	print(tforms[tforms.keys()[3]])
+	print(tforms[tforms.keys()[3]].to_xform())
+
+func add_to_owner(n: Node3D) -> void:
+	n.owner = self
+
+	for c: Node3D in n.get_children():
+		add_to_owner(c)
+
 
 class BlitzModel:
 	var texs: Array[BlitzTexture] = []
@@ -76,8 +113,19 @@ func parse_file(buffer: ByteBuffer) -> void:
 
 class BlitzNode:
 	var name: String
-	var tform: Transform3D
+	var tform: TForm
 	var children: Array[BlitzNode] = []
+
+	func to_node() -> Marker3D:
+		var m := Marker3D.new()
+
+		Main.tforms[self] = tform
+		m.transform = tform.to_xform()
+
+		for c: BlitzNode in children:
+			m.add_child(c.to_node())
+
+		return m
 
 	func to_dict() -> Dictionary:
 		var c := children.map(
@@ -132,7 +180,7 @@ func process_node(buffer: ByteBuffer) -> BlitzNode:
 
 class BlitzKey:
 	var frame: int
-	var tform: Transform3D
+	var tform: TForm
 
 	func to_dict() -> Dictionary:
 		return {
