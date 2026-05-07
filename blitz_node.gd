@@ -63,7 +63,7 @@ class BlitzNode:
 
 	func to_node() -> Marker3D:
 		var m := Marker3D.new()
-
+		m.name = name
 		m.transform = tform
 
 		for c: BlitzNode in children:
