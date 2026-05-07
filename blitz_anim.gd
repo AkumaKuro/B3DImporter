@@ -1,7 +1,5 @@
 const ByteBuffer := preload("res://byte_buffer.gd").ByteBuffer
 
-const BlitzKey := preload("res://blitz_key.gd").BlitzKey
-
 class BlitzAnim:
 	static var anim: BlitzAnim
 
@@ -9,7 +7,8 @@ class BlitzAnim:
 	var frames: int
 	var fps: float
 
-	var keys: Array[BlitzKey]
+	# Dict [frame: int, tform: Transform3D]
+	var keys: Array[Dictionary]
 
 	func to_dict() -> Dictionary:
 		return {
@@ -30,3 +29,22 @@ class BlitzAnim:
 		anim.keys = []
 
 		return anim
+
+	static func process_keys(buffer: ByteBuffer):
+		buffer = buffer.get_sub_buffer()
+
+		var flags: int = buffer.get_int()
+		var has_pos: bool = flags & 0b001
+		var has_scl: bool = flags & 0b010
+		var has_rot: bool = flags & 0b100
+
+		var keys: Dictionary[int, Transform3D] = {}
+		while !buffer.eof_reached():
+			var frame := buffer.get_int()
+
+
+			var tform := buffer.get_tform(
+				has_pos, has_scl, has_rot
+			)
+			keys[frame] = tform
+		BlitzAnim.anim.keys.append(keys)

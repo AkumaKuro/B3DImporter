@@ -3,7 +3,6 @@ const BlitzAnim := preload("res://blitz_anim.gd").BlitzAnim
 const BlitzBoneNode := preload("res://blitz_bone_node.gd").BlitzBoneNode
 const BlitzMeshNode := preload("res://blitz_mesh.gd").BlitzMeshNode
 const BlitzSequence := preload("res://blitz_sequence.gd").BlitzSequence
-const BlitzKey := preload("res://blitz_key.gd").BlitzKey
 
 class BlitzNode:
 
@@ -53,7 +52,7 @@ class BlitzNode:
 					var n := process_node(buffer)
 					add_child(n)
 				"KEYS":
-					BlitzKey.process_keys(buffer)
+					BlitzAnim.process_keys(buffer)
 				_:
 					printerr("%s not implemented" % type)
 					break
