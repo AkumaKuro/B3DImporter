@@ -9,6 +9,7 @@ const ByteBuffer := ByteBufferScript.ByteBuffer
 @export_file_path() var path: String = "res://examples/03.txt"
 
 var model: BlitzModel
+var mesh: ArrayMesh
 
 func _ready() -> void:
 	parse()
@@ -18,6 +19,7 @@ func _ready() -> void:
 func parse() -> void:
 
 	var buffer := ByteBuffer.file_as_buffer(path)
+	mesh = ArrayMesh.new()
 
 	var magic := buffer.get_type()
 	assert(magic == "BB3D", "File not recognized")
@@ -28,6 +30,12 @@ func parse() -> void:
 	parse_version(version)
 
 	parse_file(buffer)
+
+	_clear_children()
+	var m := MeshInstance3D.new()
+	m.mesh = mesh
+	add_child(m)
+	m.owner = self
 
 class BlitzModel:
 	var texs: Array[BlitzTexture] = []
@@ -64,7 +72,7 @@ func parse_file(buffer: ByteBuffer) -> void:
 			_:
 				printerr("Type %s not implemented" % block_type)
 	print("Parsing complete.")
-	print(JSON.stringify(model.to_dict(), "\t"))
+	#print(JSON.stringify(model.to_dict(), "\t"))
 
 class BlitzNode:
 	var name: String
@@ -240,23 +248,13 @@ func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
 	var mesh_array: Array
 	var indices: PackedInt32Array
 
-	var mesh := ArrayMesh.new()
-
 	while !buffer.eof_reached():
 		var type: String = buffer.get_type()
 		match type:
 			"VRTS":
 				mesh_array = process_vrts(buffer)
 			"TRIS":
-				indices = process_tris(buffer)
-				_clear_children()
-				var meshinst := MeshInstance3D.new()
-
-				mesh_array[Mesh.ARRAY_INDEX] = indices
-				mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_array)
-				meshinst.mesh = mesh
-				add_child(meshinst)
-				meshinst.owner = self
+				process_tris(buffer, mesh_array)
 			_:
 				printerr("%s not implemented" % type)
 				return
@@ -264,7 +262,7 @@ func process_mesh(buffer: ByteBuffer) -> BlitzMeshNode:
 	node.mesh = mesh
 	return node
 
-func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
+func process_tris(buffer: ByteBuffer, array: Array) -> void:
 	buffer = buffer.get_sub_buffer()
 
 	var brush_id: int = buffer.get_int()
@@ -277,7 +275,9 @@ func process_tris(buffer: ByteBuffer) -> PackedInt32Array:
 			v0, v1, v2
 		]
 		tris.append_array(triangle)
-	return tris
+
+	array[Mesh.ARRAY_INDEX] = tris
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, array)
 
 func _clear_children() -> void:
 	for child: Node in get_children():
@@ -289,8 +289,6 @@ func process_vrts(buffer: ByteBuffer) -> Array:
 	var flags: int = buffer.get_int()
 	var normal_present: bool = bool(flags & 0b01)
 	var color_present: bool = bool(flags & 0b10)
-
-	print("Normals: %s" % normal_present)
 
 	var tex_coord_sets: int = buffer.get_int()
 	if tex_coord_sets > 1:
