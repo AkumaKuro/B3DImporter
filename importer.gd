@@ -9,6 +9,7 @@ const BlitzMeshNode := preload("res://blitz_mesh.gd").BlitzMeshNode
 const BlitzBoneNode := preload("res://blitz_bone_node.gd").BlitzBoneNode
 const BlitzTexture := preload("res://blitz_texture.gd").BlitzTexture
 const BlitzBrush := preload("res://blitz_brush.gd").BlitzBrush
+const BlitzAnim := preload("res://blitz_anim.gd").BlitzAnim
 
 const ByteBuffer := preload("res://byte_buffer.gd").ByteBuffer
 
@@ -27,7 +28,8 @@ func _ready() -> void:
 
 
 func parse() -> void:
-
+	BlitzMeshNode.mesh = null
+	BlitzAnim.anim = null
 	var buffer := ByteBuffer.file_as_buffer(path)
 	animator = AnimationPlayer.new()
 	animation = Animation.new()
@@ -52,6 +54,8 @@ func parse() -> void:
 	var n := model.node.to_node()
 	add_child(n)
 	add_to_owner(n)
+
+	ResourceSaver.save(BlitzAnim.animation, "res://anim.tres")
 
 func add_to_owner(n: Node3D) -> void:
 	n.owner = self

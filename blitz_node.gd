@@ -52,7 +52,7 @@ class BlitzNode:
 					var n := process_node(buffer)
 					add_child(n)
 				"KEYS":
-					BlitzAnim.process_keys(buffer)
+					BlitzAnim.process_keys(buffer, self)
 				_:
 					printerr("%s not implemented" % type)
 					break
