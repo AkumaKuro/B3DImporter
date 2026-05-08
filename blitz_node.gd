@@ -6,6 +6,12 @@ const BlitzSequence := preload("res://blitz_sequence.gd").BlitzSequence
 
 class BlitzNode:
 
+	enum Type {
+		MESH,
+		BONE
+	}
+
+	var type: Type
 	var name: String
 	var tform: Transform3D
 	var children: Array[BlitzNode] = []
@@ -26,7 +32,7 @@ class BlitzNode:
 		var node_type := buffer.get_type()
 		match node_type:
 			"BONE":
-				node = BlitzBoneNode.process_bone(buffer)
+				node = BlitzBoneNode.process_bone(buffer, node_name, tform)
 			"MESH":
 				node = BlitzMeshNode.process_mesh(buffer)
 			_:

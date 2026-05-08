@@ -26,10 +26,23 @@ func _ready() -> void:
 	parse()
 
 
+func test_s():
+	var t := Skeleton3D.new()
+	t.name = "test"
+	var b1 := t.add_bone("B1")
+	var b2 := t.add_bone("B2")
+
+	t.set_bone_parent(b1, b2)
+	t.set_bone_pose(b1, Transform3D(Basis.IDENTITY, Vector3.BACK))
+	t.set_bone_pose(b2, Transform3D(Basis.IDENTITY, Vector3.FORWARD))
+	add_child(t)
+	t.owner = self
 
 func parse() -> void:
+
 	BlitzMeshNode.mesh = null
 	BlitzAnim.anim = null
+	BlitzBoneNode.skeleton = null
 	var buffer := ByteBuffer.file_as_buffer(path)
 	animator = AnimationPlayer.new()
 	animation = Animation.new()
@@ -54,6 +67,13 @@ func parse() -> void:
 	var n := model.node.to_node()
 	add_child(n)
 	add_to_owner(n)
+
+	var s := BlitzBoneNode.skeleton
+	s.name = "Skeleton"
+	add_child(s)
+	s.owner = self
+
+	test_s()
 
 	ResourceSaver.save(BlitzAnim.animation, "res://anim.tres")
 
