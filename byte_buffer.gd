@@ -1,5 +1,4 @@
 const Importer = preload("res://importer.gd")
-const TForm := Importer.TForm
 
 class ByteBuffer:
 	var buffer: PackedByteArray
@@ -55,15 +54,16 @@ class ByteBuffer:
 		has_pos: bool = true,
 		has_scl: bool = true,
 		has_rot: bool = true
-	) -> TForm:
+	) -> Transform3D:
 		var pos := get_vec3() if has_pos else Vector3.ZERO
 		var scl := get_vec3(false) if has_scl else Vector3.ONE
 		var rot := get_quat() if has_rot else Quaternion.IDENTITY
 
-		var t := TForm.new()
-		t.pos = pos
-		t.scl = scl
-		t.rot = rot
+		var basis := Basis(rot)
+		basis = basis.scaled(scl)
+
+		var t := Transform3D(basis, pos)
+
 		return t
 
 	func get_int() -> int:
