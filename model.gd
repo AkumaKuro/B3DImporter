@@ -170,7 +170,8 @@ func process_keys(buffer: ByteBuffer, node: BBNode) -> void:
 
 	if has_pos:
 		pos_track = anim.add_track(Animation.TYPE_POSITION_3D)
-		anim.track_set_path(pos_track, player.get_parent().get_path_to(node))
+
+		anim.track_set_path(pos_track, str(player.get_parent().get_path_to(node)) + ":global_position")
 
 	if has_scl:
 		scl_track = anim.add_track(Animation.TYPE_SCALE_3D)
@@ -178,18 +179,19 @@ func process_keys(buffer: ByteBuffer, node: BBNode) -> void:
 
 	if has_rot:
 		rot_track = anim.add_track(Animation.TYPE_ROTATION_3D)
-		anim.track_set_path(rot_track, player.get_parent().get_path_to(node))
+
+		anim.track_set_path(rot_track, str(player.get_parent().get_path_to(node)) + ":global_rotation")
 
 	while !buffer.eof_reached():
 		var frame := buffer.get_int()
 		var time := frame / fps
 		if has_pos:
-			var pos := buffer.get_vec3()
+			var pos := buffer.get_vec3(false)
 			anim.track_insert_key(pos_track, time, pos)
 
 		if has_scl:
 			var scl := buffer.get_vec3()
-			anim.track_insert_key(scl_track, time, scl)
+			#anim.track_insert_key(scl_track, time, scl)
 
 		if has_rot:
 			var rot := buffer.get_quat()

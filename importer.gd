@@ -34,7 +34,7 @@ func find_meshes(src: String) -> PackedStringArray:
 func parse() -> void:
 	clear_children()
 	var m := find_meshes(source)
-	for n: String in m.slice(10, 15):
+	for n: String in m:
 		parse_model(n)
 
 func clear_children() -> void:

@@ -16,10 +16,11 @@ class ByteBuffer:
 
 	func get_quat() -> Quaternion:
 		var w: float = get_float()
+		var vec := get_vec3()
 		return Quaternion(
-			get_float(),
-			get_float(),
-			get_float(),
+			vec.x,
+			vec.y,
+			vec.z,
 			w
 		)
 
