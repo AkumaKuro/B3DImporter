@@ -11,6 +11,9 @@ const Model := preload("res://model.gd")
 
 static var current_model: Model
 
+func _ready() -> void:
+	parse()
+
 func find_meshes(src: String) -> PackedStringArray:
 	var d := DirAccess.open(src)
 	if DirAccess.get_open_error() != OK:
@@ -31,7 +34,7 @@ func find_meshes(src: String) -> PackedStringArray:
 func parse() -> void:
 	clear_children()
 	var m := find_meshes(source)
-	for n: String in m:
+	for n: String in m.slice(10, 15):
 		parse_model(n)
 
 func clear_children() -> void:

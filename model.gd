@@ -26,6 +26,9 @@ class BBNode extends Marker3D:
 
 
 var has_bones: bool
+var anim: Animation
+var fps: float
+var player: AnimationPlayer = AnimationPlayer.new()
 
 func process_texs(buffer: ByteBuffer) -> void:
 	while !buffer.eof_reached():
@@ -72,6 +75,8 @@ func process_model(buffer: ByteBuffer) -> void:
 	buffer = buffer.get_sub_buffer()
 	var version := buffer.get_int()
 	if version != 1: printerr("Unrecognized version")
+	add_child(player)
+	player.owner = owner
 
 	while !buffer.eof_reached():
 		type = buffer.get_type()
@@ -84,6 +89,13 @@ func process_model(buffer: ByteBuffer) -> void:
 				process_node(buffer.get_sub_buffer(), self)
 			_:
 				printerr("Weird type: %s" % type)
+
+	if anim:
+		var lib := AnimationLibrary.new()
+		lib.add_animation("main", anim)
+		player.add_animation_library("main", lib)
+	else:
+		player.queue_free()
 	hide()
 
 var bones: Array[BBBone] = []
@@ -133,27 +145,66 @@ func process_node(buffer: ByteBuffer, parent: Node3D) -> void:
 		type = buffer.get_type()
 		match type:
 			"KEYS":
-				buffer.get_sub_buffer()
+				process_keys(buffer.get_sub_buffer(), node)
 			"NODE":
 				var n := buffer.get_sub_buffer()
 				process_node(n, node)
 			"ANIM":
-				buffer.get_sub_buffer()
+				process_anim(buffer.get_sub_buffer())
 			"SEQS":
 				buffer.get_sub_buffer()
 			_:
 				printerr("%s not recognized" % type)
 				return
 
-func process_anim() -> void:
-	var player := AnimationPlayer.new()
-	var lib := AnimationLibrary.new()
-	var anim := Animation.new()
+func process_keys(buffer: ByteBuffer, node: BBNode) -> void:
+	var flags := buffer.get_int()
 
-	# TODO parse anim
+	var has_pos := flags & 1
+	var has_scl := flags & 2
+	var has_rot := flags & 4
 
-	lib.add_animation("Main", anim)
-	player.add_animation_library("lib", lib)
+	var pos_track: int
+	var scl_track: int
+	var rot_track: int
+
+	if has_pos:
+		pos_track = anim.add_track(Animation.TYPE_POSITION_3D)
+		anim.track_set_path(pos_track, player.get_parent().get_path_to(node))
+
+	if has_scl:
+		scl_track = anim.add_track(Animation.TYPE_SCALE_3D)
+		anim.track_set_path(scl_track, player.get_parent().get_path_to(node))
+
+	if has_rot:
+		rot_track = anim.add_track(Animation.TYPE_ROTATION_3D)
+		anim.track_set_path(rot_track, player.get_parent().get_path_to(node))
+
+	while !buffer.eof_reached():
+		var frame := buffer.get_int()
+		var time := frame / fps
+		if has_pos:
+			var pos := buffer.get_vec3()
+			anim.track_insert_key(pos_track, time, pos)
+
+		if has_scl:
+			var scl := buffer.get_vec3()
+			anim.track_insert_key(scl_track, time, scl)
+
+		if has_rot:
+			var rot := buffer.get_quat()
+			anim.track_insert_key(rot_track, time, rot)
+
+func process_anim(buffer: ByteBuffer) -> void:
+	var flags := buffer.get_int()
+	var frames := buffer.get_int()
+	fps = buffer.get_float()
+
+	if anim != null:
+		printerr("Only one anim block per file supported")
+
+	anim = Animation.new()
+	anim.length = frames / fps
 
 func parse_mesh(
 	node: Node3D,
